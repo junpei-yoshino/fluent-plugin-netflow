@@ -230,3 +230,4 @@
 - :forwarding_status
 91:
 - :uint8
+- :mpls_prefix_len
