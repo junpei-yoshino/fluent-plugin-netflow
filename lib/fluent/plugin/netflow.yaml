@@ -222,6 +222,11 @@
 83:
 - :string
 - :if_desc
+84:
+- :string
+- :sampler_name
 89:
 - :uint8
 - :forwarding_status
+91:
+- :uint8
