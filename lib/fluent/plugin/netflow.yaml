@@ -231,3 +231,9 @@
 91:
 - :uint8
 - :mpls_prefix_len
+234:
+- :uint32
+- :ingress_vrf_id
+235:
+- :uint32
+- :egress_vrf_id
