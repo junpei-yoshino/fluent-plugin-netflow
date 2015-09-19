@@ -25,7 +25,7 @@ module Fluent
 
         @templates = Vash.new()
         # Path to default Netflow v9 field definitions
-        filename = File.expand_path('../netflow.yaml', __FILE__)
+        filename = File.expand_path('../netflow_option_fields.yaml', __FILE__)
 
         begin
           @fields = YAML.load_file(filename)
@@ -41,6 +41,14 @@ module Fluent
           rescue Exception => e
             raise "Bad syntax in definitions file #{@definitions}"
           end
+        end
+        # Path to default Netflow v9 scope field definitions
+        filename = File.expand_path('../netflow_scope_fields.yaml', __FILE__)
+
+        begin
+          @scopefields = YAML.load_file(filename)
+        rescue Exception => e
+          raise "Bad syntax in scope definitions file #{filename}"
         end
       end
 
@@ -126,6 +134,13 @@ module Fluent
               record.flowset_data.templates.each do |template|
                 catch (:field) do
                   fields = []
+                  template.scope_fields.each do |field|
+                    entry = netflow_scope_field_for(field.field_type, field.field_length)
+                    if ! entry
+                      throw :field
+                    end
+                    fields += entry
+                  end
                   template.option_fields.each do |field|
                     entry = netflow_field_for(field.field_type, field.field_length)
                     if ! entry
@@ -207,6 +222,35 @@ module Fluent
       def netflow_field_for(type, length)
         if @fields.include?(type)
           field = @fields[type]
+          if field.is_a?(Array)
+
+            if field[0].is_a?(Integer)
+              field[0] = uint_field(length, field[0])
+            end
+
+            # Small bit of fixup for skip or string field types where the length
+            # is dynamic
+            case field[0]
+            when :skip
+              field += [nil, {:length => length}]
+            when :string
+              field += [{:length => length, :trim_padding => true}]
+            end
+
+            [field]
+          else
+            $log.warn("Definition should be an array", :field => field)
+            nil
+          end
+        else
+          $log.warn("Unsupported field", :type => type, :length => length)
+          nil
+        end
+      end
+
+      def netflow_scope_field_for(type, length)
+        if @scopefields.include?(type)
+          field = @scopefields[type]
           if field.is_a?(Array)
 
             if field[0].is_a?(Integer)
